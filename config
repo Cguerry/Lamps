@@ -1,0 +1,49 @@
+#!/bin/bash
+
+#Création le 31/07/2019
+#Cynthia GUERRY
+
+cheminBash=.bashrc
+cheminNet=/etc/network/interfaces
+cheminHosts=/etc/hosts
+cheminHostname=/etc/hostname
+
+#.bashrc
+sed -i -e "9,13s/#//g"   $cheminBash
+
+#Conf réseau
+sed -i '13,16d' $cheminNet
+
+ip a
+
+read -p 'Nom d interface : ' interface
+read -p 'Adresse IP de la machine : ' address
+read -p 'Masque sous réseau : ' netmask
+read -p 'Passerelle de la machine : ' gateway
+read -p 'Adresse serveur DNS : ' dns
+
+sed -i -e "s/dhcp/static/g" $cheminNet
+echo -e "address $address\nnetmask $netmask\ngateway $gateway\ndns $dns" >> $cheminNet
+
+systemctl restart networking
+ifup $interfaces
+
+#Installation prérequis
+apt -y install ssh nmap zip dnsutils net-tools lynx ssh sudo curl git screen
+
+#Conf time
+apt -y install tzdata
+echo "tzdata tzdata/Areas select Europe" | debconf-set-selections
+echo "tzdata tzdata/Zones/Europe select Paris" | debconf-set-selections
+TIMEZONE="Europe/Paris"
+echo $TIMEZONE > /etc/timezone
+
+wget http://prdownloads.sourceforge.net/webadmin/webmin_1.910_all.deb | dpkg -i
+apt -y -f install
+
+#Conf Hosts & Hostname
+read -p 'Nom de la Machine : ' nomMachine
+sed -i '2d' $cheminHosts
+sed -i "2i $address\t$nomMachine" $cheminHosts
+sed -i 'd' $cheminHostname
+sed -i "$nomMachine" $cheminHostname
